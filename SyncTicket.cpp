@@ -112,6 +112,8 @@ int main() {
         pthread_join(cid[j], NULL);
     }
 
+
+
     pthread_mutex_destroy(&mutex);
     pthread_mutex_destroy(&reservationMutex);
     sem_destroy(&full);
@@ -145,6 +147,7 @@ void* teller(void* param) {
     printf("Teller %s has arrived.\n",tellerName);
     buffer_item item;
     for(int i = 0; i < MAX_ITEMS; i++) {
+        int givenSeat;
         sem_wait(&full);
 
         //Critical section
@@ -157,26 +160,31 @@ void* teller(void* param) {
 
 
         pthread_mutex_lock(&reservationMutex);
-        usleep(item->serviceTime*1000);
         if (reservations[item->seatNumber]) {
             // seat full
             int x;
             for (x = 1; x < theatreCapacity; x++) {
                 if(!reservations[x]) {
                     reservations[x] = true;
-                    printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber, x, tellerName);
+                    givenSeat = x;
                     break;
                 }
             }
             if (x==theatreCapacity) {
-                printf("%s requests seat %d, reserves seat None. Signed by Teller %s\n", item->clientName.c_str(), item->seatNumber, tellerName);
+                givenSeat = -1;
             }
         } else {
             // seat empty
             reservations[item->seatNumber] = true;
-            printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber, item->seatNumber, tellerName);
+            givenSeat = item->seatNumber;
         }
         pthread_mutex_unlock(&reservationMutex);
+        usleep(item->serviceTime*1000);
+        if(givenSeat>0) {
+            printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber, givenSeat, tellerName);
+        } else {
+            printf("%s requests seat %d, reserves seat None. Signed by Teller %s\n", item->clientName.c_str(), item->seatNumber, tellerName);
+        }
 
 
         sem_post(&empty);
