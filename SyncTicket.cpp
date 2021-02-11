@@ -33,6 +33,8 @@ bool *reservations;
 void* client(void* param);
 void* teller(void* param);
 string tellerNames[3] = {"A","B","C"};
+ofstream out;
+string processOutput = "/mnt/c/Users/berke/Documents/CMPE322/SyncTicket/output.txt";
 
 int main() {
 
@@ -46,13 +48,15 @@ int main() {
     sem_init(&full, 0, 0);
     sem_init(&empty,0,BUFFER_SIZE);
     vector<clientInfo*> clientInfos;
-    cout << "Welcome to the Sync-Ticket!" << endl;
 
+    out.open(processOutput, std::ios_base::app);
+    out << "Welcome to the Sync-Ticket!" << endl;
+    cout << "Welcome to the Sync-Ticket!" << endl; //TODO: Delete
     ifstream configFile("/mnt/c/Users/berke/Documents/CMPE322/SyncTicket/configuration_file.txt");
     string line, theatreName, seats;
 
     if(!configFile.good()) {
-        cout << "Error reading the file" <<endl;
+        out << "Error reading the file" << endl;
         return 0;
     }
     else {
@@ -89,7 +93,7 @@ int main() {
 
     cout << clientInfos.size() << endl;
 
-    numOfClientThreads = clientInfos.size(); // TODO: .size() ClientInfos.size()
+    numOfClientThreads = clientInfos.size();
     pthread_t pid[numOfClientThreads];
 
     numOfTellerThreads = 3;
@@ -101,7 +105,7 @@ int main() {
     }
 
     for(int i = 0; i<numOfClientThreads; i++) {
-        pthread_create(&pid[i], NULL, &client, clientInfos[i]); //TODO: pass ClientInfo
+        pthread_create(&pid[i], NULL, &client, clientInfos[i]);
     }
 
     //Join threads
@@ -113,7 +117,7 @@ int main() {
     }
 
 
-
+    out.close();
     pthread_mutex_destroy(&mutex);
     pthread_mutex_destroy(&reservationMutex);
     sem_destroy(&full);
@@ -143,7 +147,8 @@ void* client(void* param) {
 
 void* teller(void* param) {
     const char* tellerName = (*((string*)param)).c_str();
-    printf("Teller %s has arrived.\n",tellerName);
+    out << "Teller " << tellerName << " has arrived." << endl;
+    printf("Teller %s has arrived.\n",tellerName); //TODO: Delete
     buffer_item item;
     for(int i = 0; i < MAX_ITEMS; i++) {
         int givenSeat;
@@ -190,9 +195,11 @@ void* teller(void* param) {
          */
         usleep(item->serviceTime*1000);
         if(givenSeat>0) {
-            printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber, givenSeat, tellerName);
+            out << item->clientName.c_str() << " requests seat " << item->seatNumber << ", reserves seat " << givenSeat << ". Signed by Teller " << tellerName << "." << endl;
+            printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber, givenSeat, tellerName); //TODO: Delete
         } else {
-            printf("%s requests seat %d, reserves seat None. Signed by Teller %s\n", item->clientName.c_str(), item->seatNumber, tellerName);
+            out << item->clientName.c_str() << " requests seat " << item->seatNumber << " reserves seat None. Signed by Teller " << tellerName << "." << endl;
+            printf("%s requests seat %d, reserves seat None. Signed by Teller %s\n", item->clientName.c_str(), item->seatNumber, tellerName); //TODO: Delete
         }
         sem_post(&empty);
     }
