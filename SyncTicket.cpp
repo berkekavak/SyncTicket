@@ -124,20 +124,19 @@ int main() {
 
 void* client(void* param) {
     buffer_item item = (clientInfo *) param;
-    //cout << item->clientName << endl;
     usleep(item->arrivalTime * 1000);
     sem_wait(&empty);
-    //Critical section
+
+    /*
+     * Critical section for the producer buffer operations
+     */
     pthread_mutex_lock(&mutex);
-    //cout << client->clientName << endl;
-    //item->clientName = "CLIENT_" + to_string(START_NUMBER++);
     buffer[insertPointer] = item;
     insertPointer = (insertPointer + 1) % BUFFER_SIZE;
     //printf("Client %u produced %d %s\n", (unsigned int)pthread_self(), item->arrivalTime, item->clientName.c_str());
     pthread_mutex_unlock(&mutex);
 
     sem_post(&full);
-//    }
 
     pthread_exit(NULL);
 }
@@ -150,18 +149,22 @@ void* teller(void* param) {
         int givenSeat;
         sem_wait(&full);
 
-        //Critical section
+        /*
+         * Critical section for consumer buffer operations
+         */
         pthread_mutex_lock(&mutex);
         item = buffer[removePointer];
         removePointer = (removePointer + 1) % BUFFER_SIZE;
-
-        //printf("Teller: %s %u consumed %s\n", tellerName, (unsigned int)pthread_self(), item->clientName.c_str());
         pthread_mutex_unlock(&mutex);
 
-
+        /*
+         * Critical section for the reservations
+         */
         pthread_mutex_lock(&reservationMutex);
         if (reservations[item->seatNumber]) {
-            // seat full
+            /*
+             * If the seat is full, gives the lowest numbered available seat
+             */
             int x;
             for (x = 1; x < theatreCapacity; x++) {
                 if(!reservations[x]) {
@@ -174,19 +177,23 @@ void* teller(void* param) {
                 givenSeat = -1;
             }
         } else {
-            // seat empty
+            /*
+             * If the seat is empty, gives the requested seat to the client
+             */
             reservations[item->seatNumber] = true;
             givenSeat = item->seatNumber;
         }
         pthread_mutex_unlock(&reservationMutex);
+
+        /*
+         * Prints the lines after the service time as requested by the project output
+         */
         usleep(item->serviceTime*1000);
         if(givenSeat>0) {
             printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber, givenSeat, tellerName);
         } else {
             printf("%s requests seat %d, reserves seat None. Signed by Teller %s\n", item->clientName.c_str(), item->seatNumber, tellerName);
         }
-
-
         sem_post(&empty);
     }
 }
