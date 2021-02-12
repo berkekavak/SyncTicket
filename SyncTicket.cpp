@@ -17,7 +17,7 @@ struct clientInfo {
 };
 
 #define BUFFER_SIZE 3
-#define MAX_ITEMS 10
+#define MAX_ITEMS 1000
 
 typedef struct clientInfo* buffer_item;
 int START_NUMBER = 0;
@@ -34,13 +34,11 @@ void* client(void* param);
 void* teller(void* param);
 string tellerNames[3] = {"A","B","C"};
 ofstream out;
-string processOutput = "/mnt/c/Users/berke/Documents/CMPE322/SyncTicket/output.txt";
+string configuration_path, output_path;
 
-int main() {
-
-    for (int i=0; i<3; i++) {
-        cout << tellerNames[i] << endl;
-    }
+int main(int argc, char* argv[]) {
+    configuration_path = string(argv[1]);
+    output_path = string(argv[2]);
 
     int numOfClientThreads, numOfTellerThreads;
     pthread_mutex_init(&mutex, NULL);
@@ -49,10 +47,10 @@ int main() {
     sem_init(&empty,0,BUFFER_SIZE);
     vector<clientInfo*> clientInfos;
 
-    out.open(processOutput, std::ios_base::app);
+    out.open(output_path);
     out << "Welcome to the Sync-Ticket!" << endl;
     cout << "Welcome to the Sync-Ticket!" << endl; //TODO: Delete
-    ifstream configFile("/mnt/c/Users/berke/Documents/CMPE322/SyncTicket/configuration_file.txt");
+    ifstream configFile(configuration_path);
     string line, theatreName, seats;
 
     if(!configFile.good()) {
@@ -171,14 +169,14 @@ void* teller(void* param) {
              * If the seat is full, gives the lowest numbered available seat
              */
             int x;
-            for (x = 1; x < theatreCapacity; x++) {
+            for (x = 1; x < theatreCapacity+1; x++) {
                 if(!reservations[x]) {
                     reservations[x] = true;
                     givenSeat = x;
                     break;
                 }
             }
-            if (x==theatreCapacity) {
+            if (x==theatreCapacity+1) {
                 givenSeat = -1;
             }
         } else {
