@@ -16,18 +16,24 @@ struct clientInfo {
     int arrivalTime, serviceTime, seatNumber;
 };
 
-#define BUFFER_SIZE 3
-#define MAX_ITEMS 1000
+struct tellerInfo {
+    string tellerName;
+    int tellerNo;
+};
+
+#define NUMBER_OF_TELLERS 3
 
 typedef struct clientInfo* buffer_item;
-int START_NUMBER = 0;
-buffer_item buffer[BUFFER_SIZE];
+buffer_item buffer[NUMBER_OF_TELLERS];
 
 pthread_mutex_t queue_mutex, reservationMutex;
 sem_t empty;
 sem_t full;
 
-int insertPointer = 0, removePointer = 0, theatreCapacity;
+sem_t jobReady[3];
+sem_t resultReady[3];
+
+int theatreCapacity;
 bool *reservations;
 
 void* client(void* param);
@@ -35,16 +41,23 @@ void* teller(void* param);
 string tellerNames[3] = {"A","B","C"};
 ofstream out;
 string configuration_path, output_path;
+bool isTellerBusy[3];
+clientInfo* jobs[3];
+int numOfClientThreads, numOfTellerThreads;
+bool running = true;
 
 int main(int argc, char* argv[]) {
     configuration_path = string(argv[1]);
     output_path = string(argv[2]);
 
-    int numOfClientThreads, numOfTellerThreads;
     pthread_mutex_init(&queue_mutex, NULL);
     pthread_mutex_init(&reservationMutex, NULL);
     sem_init(&full, 0, 0);
-    sem_init(&empty,0,BUFFER_SIZE);
+    for (int i = 0; i < 3; i++) {
+        sem_init(&(jobReady[i]), 0, 0);
+        sem_init(&(resultReady[i]), 0, 0);
+    }
+    sem_init(&empty, 0, NUMBER_OF_TELLERS); // teller count
     vector<clientInfo*> clientInfos;
 
     out.open(output_path);
@@ -99,7 +112,10 @@ int main(int argc, char* argv[]) {
 
     //Create producer and consumer threads
     for(int j = 0; j<numOfTellerThreads; j++) {
-        pthread_create(&cid[j], NULL, &teller, &(tellerNames[j]));
+        tellerInfo* info = new tellerInfo;
+        info->tellerName = tellerNames[j];
+        info->tellerNo = j;
+        pthread_create(&cid[j], NULL, &teller, info);
     }
 
     for(int i = 0; i<numOfClientThreads; i++) {
@@ -110,16 +126,24 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i < numOfClientThreads; i++) {
         pthread_join(pid[i], NULL);
     }
-    for(int j = 0; j < numOfTellerThreads; j++) {
-        pthread_join(cid[j], NULL);
-    }
 
+    // tellers have finished serving all
+
+//    for(int j = 0; j < numOfTellerThreads; j++) {
+//        pthread_join(cid[j], NULL);
+//    }
+
+    out << "All clients received service." << endl;
 
     out.close();
     pthread_mutex_destroy(&queue_mutex);
     pthread_mutex_destroy(&reservationMutex);
     sem_destroy(&full);
     sem_destroy(&empty);
+    for (int i = 0; i < 3; i++) {
+        sem_destroy(&(jobReady[i]));
+        sem_destroy(&(resultReady[i]));
+    }
     delete [] reservations;
     return 0;
 }
@@ -127,46 +151,47 @@ int main(int argc, char* argv[]) {
 void* client(void* param) {
     buffer_item item = (clientInfo *) param;
     usleep(item->arrivalTime * 1000);
-    sem_wait(&empty);
 
-    /*
-     * Critical section for the producer buffer operations
-     */
+    sem_wait(&empty); //
+    // if we're here, one of the tellers should be available
+
     pthread_mutex_lock(&queue_mutex);
-    buffer[insertPointer] = item;
-    insertPointer = (insertPointer + 1) % BUFFER_SIZE;
-    //printf("Client %u produced %d %s\n", (unsigned int)pthread_self(), item->arrivalTime, item->clientName.c_str());
+    int tellerNo;
+    for (int i = 0; i < 3; i++) {
+        if (!isTellerBusy[i]) {
+            tellerNo = i;
+            jobs[i] = item;
+            sem_post(&(jobReady[i])); // inc
+            break;
+        }
+    }
     pthread_mutex_unlock(&queue_mutex);
 
-    sem_post(&full);
-
+    //printf("client %s waiting for teller %d...\n", item->clientName.c_str(), tellerNo);
+    sem_wait(&(resultReady[tellerNo]));
+    delete item;
     pthread_exit(NULL);
 }
 
 void* teller(void* param) {
-    const char* tellerName = (*((string*)param)).c_str();
-    out << "Teller " << tellerName << " has arrived." << endl;
-    printf("Teller %s has arrived.\n",tellerName); //TODO: Delete
+    tellerInfo* info = (tellerInfo*)param;
+    out << "Teller " << info->tellerName.c_str() << " has arrived." << endl;
+    printf("Teller %s has arrived.\n",info->tellerName.c_str()); //TODO: Delete
     buffer_item item;
-    for(int i = 0; i < MAX_ITEMS; i++) {
+    while(running) {
         int givenSeat;
-        sem_wait(&full);
-
-        /*
-         * Critical section for consumer buffer operations
-         */
-        pthread_mutex_lock(&queue_mutex);
-        item = buffer[removePointer];
-        removePointer = (removePointer + 1) % BUFFER_SIZE;
-        pthread_mutex_unlock(&queue_mutex);
+        sem_wait(&(jobReady[info->tellerNo])); //////////////////////
+        isTellerBusy[info->tellerNo] = true;
+        item = jobs[info->tellerNo];
 
         /*
          * Critical section for the reservations
          */
         pthread_mutex_lock(&reservationMutex);
-        if (reservations[item->seatNumber]) {
+
+        if (item->seatNumber > theatreCapacity || reservations[item->seatNumber]) {
             /*
-             * If the seat is full, gives the lowest numbered available seat
+             * If the seat number is too high or seat is full, gives the lowest numbered available seat
              */
             int x;
             for (x = 1; x < theatreCapacity+1; x++) {
@@ -193,12 +218,15 @@ void* teller(void* param) {
          */
         usleep(item->serviceTime*1000);
         if(givenSeat>0) {
-            out << item->clientName.c_str() << " requests seat " << item->seatNumber << ", reserves seat " << givenSeat << ". Signed by Teller " << tellerName << "." << endl;
-            printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber, givenSeat, tellerName); //TODO: Delete
+            out << item->clientName.c_str() << " requests seat " << item->seatNumber << ", reserves seat " << givenSeat << ". Signed by Teller " << info->tellerName.c_str() << "." << endl;
+            printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber, givenSeat, info->tellerName.c_str()); //TODO: Delete
         } else {
-            out << item->clientName.c_str() << " requests seat " << item->seatNumber << " reserves seat None. Signed by Teller " << tellerName << "." << endl;
-            printf("%s requests seat %d, reserves seat None. Signed by Teller %s\n", item->clientName.c_str(), item->seatNumber, tellerName); //TODO: Delete
+            out << item->clientName.c_str() << " requests seat " << item->seatNumber << " reserves seat None. Signed by Teller " << info->tellerName.c_str() << "." << endl;
+            printf("%s requests seat %d, reserves seat None. Signed by Teller %s\n", item->clientName.c_str(), item->seatNumber, info->tellerName.c_str()); //TODO: Delete
         }
+
+        isTellerBusy[info->tellerNo] = false;
+        sem_post(&(resultReady[info->tellerNo])); // inc
         sem_post(&empty);
     }
     pthread_exit(NULL);
