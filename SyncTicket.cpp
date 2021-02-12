@@ -23,7 +23,7 @@ typedef struct clientInfo* buffer_item;
 int START_NUMBER = 0;
 buffer_item buffer[BUFFER_SIZE];
 
-pthread_mutex_t mutex, reservationMutex;
+pthread_mutex_t queue_mutex, reservationMutex;
 sem_t empty;
 sem_t full;
 
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
     output_path = string(argv[2]);
 
     int numOfClientThreads, numOfTellerThreads;
-    pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_init(&queue_mutex, NULL);
     pthread_mutex_init(&reservationMutex, NULL);
     sem_init(&full, 0, 0);
     sem_init(&empty,0,BUFFER_SIZE);
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
 
 
     out.close();
-    pthread_mutex_destroy(&mutex);
+    pthread_mutex_destroy(&queue_mutex);
     pthread_mutex_destroy(&reservationMutex);
     sem_destroy(&full);
     sem_destroy(&empty);
@@ -132,11 +132,11 @@ void* client(void* param) {
     /*
      * Critical section for the producer buffer operations
      */
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&queue_mutex);
     buffer[insertPointer] = item;
     insertPointer = (insertPointer + 1) % BUFFER_SIZE;
     //printf("Client %u produced %d %s\n", (unsigned int)pthread_self(), item->arrivalTime, item->clientName.c_str());
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&queue_mutex);
 
     sem_post(&full);
 
@@ -155,10 +155,10 @@ void* teller(void* param) {
         /*
          * Critical section for consumer buffer operations
          */
-        pthread_mutex_lock(&mutex);
+        pthread_mutex_lock(&queue_mutex);
         item = buffer[removePointer];
         removePointer = (removePointer + 1) % BUFFER_SIZE;
-        pthread_mutex_unlock(&mutex);
+        pthread_mutex_unlock(&queue_mutex);
 
         /*
          * Critical section for the reservations
@@ -201,4 +201,5 @@ void* teller(void* param) {
         }
         sem_post(&empty);
     }
+    pthread_exit(NULL);
 }
