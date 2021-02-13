@@ -26,7 +26,7 @@ struct tellerInfo {
 typedef struct clientInfo* buffer_item;
 buffer_item buffer[NUMBER_OF_TELLERS];
 
-pthread_mutex_t queue_mutex, reservationMutex, tellerMutex;
+pthread_mutex_t queue_mutex, reservationMutex, tellerMutex, outMutex;
 sem_t empty;
 sem_t full;
 
@@ -53,6 +53,7 @@ int main(int argc, char* argv[]) {
     pthread_mutex_init(&queue_mutex, NULL);
     pthread_mutex_init(&reservationMutex, NULL);
     pthread_mutex_init(&tellerMutex, NULL);
+    pthread_mutex_init(&outMutex, NULL);
     sem_init(&full, 0, 0);
     for (int i = 0; i < 3; i++) {
         sem_init(&(jobReady[i]), 0, 0);
@@ -76,8 +77,19 @@ int main(int argc, char* argv[]) {
         getline(configFile, seats);
         cout << "Theatre Name: " << theatreName << endl;
         cout << "Number of Seats: " << seats << endl;
-        theatreCapacity = stoi(seats);
-        reservations = new bool[theatreCapacity+1];
+
+        if (theatreName.rfind("OdaTiyatrosu", 0) == 0) {
+            theatreCapacity = 60;
+        } else if (theatreName.rfind("UskudarStudyoSahne", 0) == 0) {
+            theatreCapacity = 80;
+        } else if (theatreName.rfind("KucukSahne", 0) == 0) {
+            theatreCapacity = 200;
+        } else {
+            printf("Unexpected theatre %s \n", theatreName.c_str());
+            exit(1);
+        }
+
+        reservations = new bool[theatreCapacity];
 
         while (getline(configFile,line)) {
             stringstream ss(line);
@@ -97,7 +109,7 @@ int main(int argc, char* argv[]) {
             info->clientName = parts[0];
             info->arrivalTime = stoi(parts[1]);
             info->serviceTime = stoi(parts[2]);
-            info->seatNumber = stoi(parts[3]);
+            info->seatNumber = stoi(parts[3]) - 1;
 
             clientInfos.push_back(info);
         }
@@ -139,6 +151,7 @@ int main(int argc, char* argv[]) {
     pthread_mutex_destroy(&queue_mutex);
     pthread_mutex_destroy(&reservationMutex);
     pthread_mutex_destroy(&tellerMutex);
+    pthread_mutex_destroy(&outMutex);
     sem_destroy(&full);
     sem_destroy(&empty);
     for (int i = 0; i < 3; i++) {
@@ -170,7 +183,7 @@ void* client(void* param) {
 
     //printf("client %s waiting for teller %d...\n", item->clientName.c_str(), tellerNo);
     sem_wait(&(resultReady[tellerNo]));
-    delete item;
+    //delete item;
     pthread_exit(NULL);
 }
 
@@ -190,19 +203,21 @@ void* teller(void* param) {
          */
         pthread_mutex_lock(&reservationMutex);
 
-        if (item->seatNumber > theatreCapacity || reservations[item->seatNumber]) {
+        if (item->seatNumber > (theatreCapacity - 1) || reservations[item->seatNumber]) {
             /*
              * If the seat number is too high or seat is full, gives the lowest numbered available seat
              */
             int x;
-            for (x = 1; x < theatreCapacity+1; x++) {
+            bool found = false;
+            for (x = 0; x < theatreCapacity; x++) {
                 if(!reservations[x]) {
                     reservations[x] = true;
                     givenSeat = x;
+                    found = true;
                     break;
                 }
             }
-            if (x==theatreCapacity+1) {
+            if (!found) {
                 givenSeat = -1;
             }
         }
@@ -219,13 +234,15 @@ void* teller(void* param) {
          * Prints the lines after the service time as requested by the project output
          */
         usleep(item->serviceTime*1000);
-        if(givenSeat>0) {
-            out << item->clientName.c_str() << " requests seat " << item->seatNumber << ", reserves seat " << givenSeat << ". Signed by Teller " << info->tellerName.c_str() << "." << endl;
-            printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber, givenSeat, info->tellerName.c_str()); //TODO: Delete
+        pthread_mutex_lock(&outMutex);
+        if(givenSeat>-1) {
+            out << item->clientName.c_str() << " requests seat " << (item->seatNumber + 1) << ", reserves seat " << (givenSeat + 1) << ". Signed by Teller " << info->tellerName.c_str() << "." << endl;
+            printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber + 1, givenSeat + 1, info->tellerName.c_str()); //TODO: Delete
         } else {
-            out << item->clientName.c_str() << " requests seat " << item->seatNumber << " reserves seat None. Signed by Teller " << info->tellerName.c_str() << "." << endl;
-            printf("%s requests seat %d, reserves seat None. Signed by Teller %s\n", item->clientName.c_str(), item->seatNumber, info->tellerName.c_str()); //TODO: Delete
+            out << item->clientName.c_str() << " requests seat " << (item->seatNumber + 1) << " reserves seat None. Signed by Teller " << info->tellerName.c_str() << "." << endl;
+            printf("%s requests seat %d, reserves seat None. Signed by Teller %s\n", item->clientName.c_str(), item->seatNumber + 1, info->tellerName.c_str()); //TODO: Delete
         }
+        pthread_mutex_unlock(&outMutex);
 
         isTellerBusy[info->tellerNo] = false;
         sem_post(&(resultReady[info->tellerNo])); // inc
