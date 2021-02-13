@@ -26,7 +26,7 @@ struct tellerInfo {
 typedef struct clientInfo* buffer_item;
 buffer_item buffer[NUMBER_OF_TELLERS];
 
-pthread_mutex_t queue_mutex, reservationMutex;
+pthread_mutex_t queue_mutex, reservationMutex, tellerMutex;
 sem_t empty;
 sem_t full;
 
@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
 
     pthread_mutex_init(&queue_mutex, NULL);
     pthread_mutex_init(&reservationMutex, NULL);
+    pthread_mutex_init(&tellerMutex, NULL);
     sem_init(&full, 0, 0);
     for (int i = 0; i < 3; i++) {
         sem_init(&(jobReady[i]), 0, 0);
@@ -115,7 +116,12 @@ int main(int argc, char* argv[]) {
         tellerInfo* info = new tellerInfo;
         info->tellerName = tellerNames[j];
         info->tellerNo = j;
+        pthread_mutex_lock(&tellerMutex);
+        usleep(1000);
         pthread_create(&cid[j], NULL, &teller, info);
+        usleep(1000);
+        pthread_mutex_unlock(&tellerMutex);
+
     }
 
     for(int i = 0; i<numOfClientThreads; i++) {
@@ -127,17 +133,12 @@ int main(int argc, char* argv[]) {
         pthread_join(pid[i], NULL);
     }
 
-    // tellers have finished serving all
-
-//    for(int j = 0; j < numOfTellerThreads; j++) {
-//        pthread_join(cid[j], NULL);
-//    }
-
     out << "All clients received service." << endl;
 
     out.close();
     pthread_mutex_destroy(&queue_mutex);
     pthread_mutex_destroy(&reservationMutex);
+    pthread_mutex_destroy(&tellerMutex);
     sem_destroy(&full);
     sem_destroy(&empty);
     for (int i = 0; i < 3; i++) {
@@ -180,7 +181,7 @@ void* teller(void* param) {
     buffer_item item;
     while(running) {
         int givenSeat;
-        sem_wait(&(jobReady[info->tellerNo])); //////////////////////
+        sem_wait(&(jobReady[info->tellerNo]));
         isTellerBusy[info->tellerNo] = true;
         item = jobs[info->tellerNo];
 
@@ -204,7 +205,8 @@ void* teller(void* param) {
             if (x==theatreCapacity+1) {
                 givenSeat = -1;
             }
-        } else {
+        }
+        else {
             /*
              * If the seat is empty, gives the requested seat to the client
              */
