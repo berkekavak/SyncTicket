@@ -9,6 +9,8 @@
 #include <string>
 #include <semaphore.h>
 
+// Berke Kavak 2019700192
+
 using namespace std;
 
 struct clientInfo {
@@ -64,7 +66,6 @@ int main(int argc, char* argv[]) {
 
     out.open(output_path);
     out << "Welcome to the Sync-Ticket!" << endl;
-    cout << "Welcome to the Sync-Ticket!" << endl; //TODO: Delete
     ifstream configFile(configuration_path);
     string line, theatreName, seats;
 
@@ -75,8 +76,6 @@ int main(int argc, char* argv[]) {
     else {
         getline(configFile, theatreName);
         getline(configFile, seats);
-        cout << "Theatre Name: " << theatreName << endl;
-        cout << "Number of Seats: " << seats << endl;
 
         if (theatreName.rfind("OdaTiyatrosu", 0) == 0) {
             theatreCapacity = 60;
@@ -91,6 +90,7 @@ int main(int argc, char* argv[]) {
 
         reservations = new bool[theatreCapacity];
 
+        // Extracts the data from the input file
         while (getline(configFile,line)) {
             stringstream ss(line);
             string delimiter = ",";
@@ -114,8 +114,6 @@ int main(int argc, char* argv[]) {
             clientInfos.push_back(info);
         }
     }
-
-    cout << clientInfos.size() << endl;
 
     numOfClientThreads = clientInfos.size();
     pthread_t pid[numOfClientThreads];
@@ -166,8 +164,8 @@ void* client(void* param) {
     buffer_item item = (clientInfo *) param;
     usleep(item->arrivalTime * 1000);
 
-    sem_wait(&empty); //
-    // if we're here, one of the tellers should be available
+    sem_wait(&empty);
+    // If we're here, one of the tellers should be available
 
     pthread_mutex_lock(&queue_mutex);
     int tellerNo;
@@ -175,22 +173,19 @@ void* client(void* param) {
         if (!isTellerBusy[i]) {
             tellerNo = i;
             jobs[i] = item;
-            sem_post(&(jobReady[i])); // inc
+            sem_post(&(jobReady[i])); // Increments the value of the semaphore
             break;
         }
     }
     pthread_mutex_unlock(&queue_mutex);
 
-    //printf("client %s waiting for teller %d...\n", item->clientName.c_str(), tellerNo);
     sem_wait(&(resultReady[tellerNo]));
-    //delete item;
     pthread_exit(NULL);
 }
 
 void* teller(void* param) {
     tellerInfo* info = (tellerInfo*)param;
     out << "Teller " << info->tellerName.c_str() << " has arrived." << endl;
-    printf("Teller %s has arrived.\n",info->tellerName.c_str()); //TODO: Delete
     buffer_item item;
     while(running) {
         int givenSeat;
@@ -237,10 +232,8 @@ void* teller(void* param) {
         pthread_mutex_lock(&outMutex);
         if(givenSeat>-1) {
             out << item->clientName.c_str() << " requests seat " << (item->seatNumber + 1) << ", reserves seat " << (givenSeat + 1) << ". Signed by Teller " << info->tellerName.c_str() << "." << endl;
-            printf("%s requests seat %d, reserves seat %d. Signed by Teller %s\n",item->clientName.c_str(), item->seatNumber + 1, givenSeat + 1, info->tellerName.c_str()); //TODO: Delete
         } else {
             out << item->clientName.c_str() << " requests seat " << (item->seatNumber + 1) << " reserves seat None. Signed by Teller " << info->tellerName.c_str() << "." << endl;
-            printf("%s requests seat %d, reserves seat None. Signed by Teller %s\n", item->clientName.c_str(), item->seatNumber + 1, info->tellerName.c_str()); //TODO: Delete
         }
         pthread_mutex_unlock(&outMutex);
 
