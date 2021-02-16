@@ -1,0 +1,7 @@
+KucukSahne
+5
+Client1,10,25,10
+Client2,20,25,10
+Client3,80,110,10
+Client4,150,50,10
+Client5,100,80,10

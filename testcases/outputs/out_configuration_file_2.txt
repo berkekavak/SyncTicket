@@ -1,0 +1,70 @@
+Welcome to the Sync-Ticket!
+Teller A has arrived.
+Teller B has arrived.
+Teller C has arrived.
+Client1 requests seat 1, reserves seat 1. Signed by Teller A.
+Client2 requests seat 2, reserves seat 2. Signed by Teller A.
+Client3 requests seat 3, reserves seat 3. Signed by Teller A.
+Client4 requests seat 4, reserves seat 4. Signed by Teller A.
+Client5 requests seat 5, reserves seat 5. Signed by Teller A.
+Client6 requests seat 6, reserves seat 6. Signed by Teller A.
+Client7 requests seat 7, reserves seat 7. Signed by Teller A.
+Client8 requests seat 8, reserves seat 8. Signed by Teller A.
+Client9 requests seat 9, reserves seat 9. Signed by Teller A.
+Client10 requests seat 10, reserves seat 10. Signed by Teller A.
+Client11 requests seat 11, reserves seat 11. Signed by Teller A.
+Client12 requests seat 12, reserves seat 12. Signed by Teller A.
+Client13 requests seat 13, reserves seat 13. Signed by Teller A.
+Client14 requests seat 14, reserves seat 14. Signed by Teller A.
+Client15 requests seat 15, reserves seat 15. Signed by Teller A.
+Client16 requests seat 16, reserves seat 16. Signed by Teller A.
+Client17 requests seat 17, reserves seat 17. Signed by Teller A.
+Client18 requests seat 18, reserves seat 18. Signed by Teller A.
+Client19 requests seat 19, reserves seat 19. Signed by Teller A.
+Client20 requests seat 20, reserves seat 20. Signed by Teller A.
+Client21 requests seat 21, reserves seat 21. Signed by Teller A.
+Client22 requests seat 22, reserves seat 22. Signed by Teller A.
+Client23 requests seat 23, reserves seat 23. Signed by Teller A.
+Client24 requests seat 24, reserves seat 24. Signed by Teller A.
+Client25 requests seat 25, reserves seat 25. Signed by Teller A.
+Client26 requests seat 26, reserves seat 26. Signed by Teller A.
+Client27 requests seat 27, reserves seat 27. Signed by Teller A.
+Client28 requests seat 28, reserves seat 28. Signed by Teller A.
+Client29 requests seat 29, reserves seat 29. Signed by Teller A.
+Client30 requests seat 30, reserves seat 30. Signed by Teller A.
+Client31 requests seat 31, reserves seat 31. Signed by Teller A.
+Client32 requests seat 32, reserves seat 32. Signed by Teller A.
+Client33 requests seat 33, reserves seat 33. Signed by Teller A.
+Client34 requests seat 34, reserves seat 34. Signed by Teller A.
+Client35 requests seat 35, reserves seat 35. Signed by Teller A.
+Client36 requests seat 36, reserves seat 36. Signed by Teller A.
+Client37 requests seat 37, reserves seat 37. Signed by Teller A.
+Client38 requests seat 38, reserves seat 38. Signed by Teller A.
+Client39 requests seat 39, reserves seat 39. Signed by Teller A.
+Client40 requests seat 40, reserves seat 40. Signed by Teller A.
+Client41 requests seat 41, reserves seat 41. Signed by Teller A.
+Client42 requests seat 42, reserves seat 42. Signed by Teller A.
+Client43 requests seat 43, reserves seat 43. Signed by Teller A.
+Client44 requests seat 44, reserves seat 44. Signed by Teller A.
+Client45 requests seat 45, reserves seat 45. Signed by Teller A.
+Client46 requests seat 46, reserves seat 46. Signed by Teller A.
+Client47 requests seat 47, reserves seat 47. Signed by Teller A.
+Client48 requests seat 48, reserves seat 48. Signed by Teller A.
+Client49 requests seat 49, reserves seat 49. Signed by Teller A.
+Client50 requests seat 50, reserves seat 50. Signed by Teller A.
+Client51 requests seat 51, reserves seat 51. Signed by Teller A.
+Client52 requests seat 52, reserves seat 52. Signed by Teller A.
+Client53 requests seat 53, reserves seat 53. Signed by Teller A.
+Client54 requests seat 54, reserves seat 54. Signed by Teller A.
+Client55 requests seat 55, reserves seat 55. Signed by Teller A.
+Client56 requests seat 56, reserves seat 56. Signed by Teller A.
+Client57 requests seat 57, reserves seat 57. Signed by Teller A.
+Client58 requests seat 58, reserves seat 58. Signed by Teller A.
+Client59 requests seat 59, reserves seat 59. Signed by Teller A.
+Client60 requests seat 60, reserves seat 60. Signed by Teller A.
+Client61 requests seat 1, reserves None. Signed by Teller A.
+Client62 requests seat 2, reserves None. Signed by Teller A.
+Client63 requests seat 3, reserves None. Signed by Teller A.
+Client64 requests seat 4, reserves None. Signed by Teller A.
+Client65 requests seat 5, reserves None. Signed by Teller A.
+All clients received service.
